@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: zhkh_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zhkh_db
+      POSTGRES_USER: zhkh_user
+      POSTGRES_PASSWORD: zhkh_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zhkh_user -d zhkh_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: zhkh_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: zhkh_db
+      DB_USER: zhkh_user
+      DB_PASSWORD: zhkh_password
+      JWT_SECRET: supersecretjwtkey2024changeme
+      NODE_ENV: production
+      CLIENT_URL: http://localhost:3000
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    container_name: zhkh_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
